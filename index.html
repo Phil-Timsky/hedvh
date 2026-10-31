@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>箭头字符复制器 · 一键复制</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: linear-gradient(145deg, #f7f9fc 0%, #e9eef3 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding: 1.5rem;
+      margin: 0;
+    }
+    .card {
+      max-width: 1000px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 3rem;
+      padding: 2rem 1.8rem 2.2rem;
+      box-shadow: 0 25px 40px -12px rgba(0, 20, 30, 0.3),
+                  inset 0 1px 4px rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #1e2b3c;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 1.4rem;
+      padding-left: 0.3rem;
+    }
+    h1 span {
+      background: #1e2b3c;
+      color: #f0f6ff;
+      font-size: 1.1rem;
+      padding: 0.25rem 0.9rem;
+      border-radius: 40px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      box-shadow: inset 0 -2px 0 #0f1a26;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.8rem;
+    }
+    .arrow-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border: 1px solid #cddae8;
+      border-radius: 1.2rem;
+      font-size: 2.1rem;
+      line-height: 1.2;
+      padding: 0.6rem 0.2rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.02);
+      color: #1f2e3f;
+      font-family: 'Segoe UI', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      aspect-ratio: 1 / 1;
+    }
+    .arrow-btn:hover {
+      background: #f0f7ff;
+      border-color: #8bb3e0;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 16px -8px rgba(24, 80, 140, 0.25);
+    }
+    .arrow-btn:active {
+      transform: translateY(1px) scale(0.97);
+      background: #d9e9ff;
+      border-color: #6d9ed6;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .copy-toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e2b3c;
+      color: white;
+      padding: 0.7rem 2rem;
+      border-radius: 60px;
+      font-weight: 500;
+      font-size: 1rem;
+      letter-spacing: 0.3px;
+      box-shadow: 0 18px 30px -10px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.25s;
+      pointer-events: none;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      white-space: nowrap;
+    }
+    .copy-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .footer-note {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #4e6279;
+      font-size: 0.9rem;
+      padding: 0 0.4rem;
+      border-top: 1px dashed #b7c9db;
+      padding-top: 1.3rem;
+      margin-top: 0.2rem;
+    }
+    .badge {
+      background: #deeaf9;
+      border-radius: 20px;
+      padding: 0.35rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #21476b;
+    }
+    /* 针对一些箭头可能显示很小的情况加大字号 */
+    .arrow-btn i, .arrow-btn span {
+      font-size: 2rem;
+      font-style: normal;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>
+      ⚡ 箭头字符复制器
+      <span>点击即复制</span>
+    </h1>
+
+    <!-- 箭头网格容器 -->
+    <div class="grid" id="arrowGrid"></div>
+
+    <div class="footer-note">
+      <span>📋 任意箭头 · 单击复制</span>
+      <span class="badge" id="arrowCount">0 个箭头</span>
+    </div>
+  </div>
+
+  <!-- 复制成功浮层 -->
+  <div class="copy-toast" id="copyToast">✓ 已复制到剪贴板</div>
+
+  <script>
+    (function() {
+      // ---------- 箭头字符集合 (丰富、常见、美观) ----------
+      const arrowCharacters = [
+        // 基础方向
+        '←', '→', '↑', '↓', '↔', '↕', '⇄', '⇅', '⇆', '⇇', '⇈', '⇉', '⇊',
+        // 双线箭头 / 粗体
+        '⇐', '⇒', '⇑', '⇓', '⇔', '⇕', '⇖', '⇗', '⇘', '⇙',
+        // 长箭头 / 特殊
+        '⟵', '⟶', '⟷', '⟸', '⟹', '⟺', '⟻', '⟼', '⟽', '⟾', '⟿',
+        // 斜向
+        '↖', '↗', '↘', '↙', '⇱', '⇲', '⤡', '⤢', '⤣', '⤤', '⤥', '⤦',
+        // 弯曲 / 回转
+        '↩', '↪', '↫', '↬', '↭', '↮', '↯', '↰', '↱', '↲', '↳', '↴', '↵',
+        // 双向弯曲
+        '⇚', '⇛', '⇜', '⇝', '⇞', '⇟', '⇠', '⇡', '⇢', '⇣',
+        // 鱼叉 / 特殊箭头
+        '↢', '↣', '↤', '↥', '↦', '↧', '↨', '↩', '↪',
+        // 带圈 / 方形箭头
+        '⭠', '⭢', '⭡', '⭣', '⭤', '⭥', '⭦', '⭧', '⭨', '⭩', '⭪', '⭫', '⭬', '⭭', '⭮', '⭯', '⭰',
+        // 更多 Unicode 箭头
+        '⇍', '⇎', '⇏', '⇚', '⇛', '⇜', '⇝', '⇞', '⇟', '⇠', '⇡', '⇢', '⇣', '⇤', '⇥',
+        '⇦', '⇧', '⇨', '⇩', '⇪', '⇫', '⇬', '⇭', '⇮', '⇯', '⇰', '⇱', '⇲', '⇳',
+        '↜', '↝', '↞', '↟', '↠', '↡', '↢', '↣', '↤', '↥', '↦', '↧', '↨',
+        '⇵', '⇶', '⇷', '⇸', '⇹', '⇺', '⇻', '⇼', '⇽', '⇾', '⇿',
+        '↚', '↛', '↜', '↝', '↞', '↟', '↠', '↡',
+        // 重型箭头 / 杂项
+        '➔', '➜', '➝', '➞', '➟', '➠', '➡', '➢', '➣', '➤', '➥', '➦', '➧', '➨', '➩', '➪', '➫', '➬', '➭', '➮', '➯',
+        '➱', '➲', '➳', '➴', '➵', '➶', '➷', '➸', '➹', '➺', '➻', '➼', '➽', '➾', '➿',
+        '⤴', '⤵', '⤶', '⤷', '⤸', '⤹', '⤺', '⤻', '⤼', '⤽', '⤾', '⤿',
+        '⭅', '⭆', '⭇', '⭈', '⭉', '⭊', '⭋', '⭌',
+        // 带框 / 其它箭头
+        '↹', '↺', '↻', '↼', '↽', '↾', '↿', '⇀', '⇁', '⇂', '⇃', '⇄', '⇅', '⇆', '⇇', '⇈', '⇉', '⇊', '⇋', '⇌',
+        '⇍', '⇎', '⇏', '⇕', '⇖', '⇗', '⇘', '⇙', '⇚', '⇛', '⇜', '⇝', '⇞', '⇟', '⇠', '⇡', '⇢', '⇣', '⇤', '⇥',
+        '⇦', '⇧', '⇨', '⇩', '⇪', '⇫', '⇬', '⇭', '⇮', '⇯', '⇰', '⇱', '⇲', '⇳', '⇴', '⇵', '⇶', '⇷', '⇸', '⇹', '⇺', '⇻', '⇼', '⇽', '⇾', '⇿',
+        // 常用符号箭头
+        '⬅', '⬆', '⬇', '⬈', '⬉', '⬊', '⬋', '⬌', '⬍', '⬎', '⬏', '⬐', '⬑',
+        '↩️', '↪️', '🔁', '🔂', '▶️', '◀️', '🔼', '🔽', '⏩', '⏪', '⏫', '⏬'
+      ];
+
+      // 去重 (避免重复太多，保留第一个出现的)
+      const uniqueArrows = [...new Set(arrowCharacters)];
+
+      // 获取容器
+      const grid = document.getElementById('arrowGrid');
+      const toast = document.getElementById('copyToast');
+      const countSpan = document.getElementById('arrowCount');
+
+      // 更新计数显示
+      countSpan.textContent = uniqueArrows.length + ' 个箭头';
+
+      // 复制文本到剪贴板 (带回退)
+      async function copyToClipboard(text) {
+        try {
+          // 现代 API 优先
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } else {
+            // 回退方案: 创建临时 textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            textarea.style.pointerEvents = 'none';
+            textarea.style.left = '-9999px';
+            textarea.style.top = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length); // 对移动端
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return success;
+          }
+        } catch (err) {
+          console.warn('复制失败: ', err);
+          return false;
+        }
+      }
+
+      // 显示 toast 提示
+      let toastTimer = null;
+      function showToast(message = '✓ 已复制到剪贴板') {
+        toast.textContent = message;
+        toast.classList.add('show');
+
+        // 清除之前的定时器
+        if (toastTimer) clearTimeout(toastTimer);
+
+        toastTimer = setTimeout(() => {
+          toast.classList.remove('show');
+          toastTimer = null;
+        }, 1500);
+      }
+
+      // 处理点击箭头
+      async function handleArrowClick(event) {
+        const btn = event.currentTarget;
+        const arrow = btn.dataset.arrow;
+
+        if (!arrow) return;
+
+        const success = await copyToClipboard(arrow);
+
+        if (success) {
+          showToast(`✓ 已复制 “${arrow}”`);
+          // 点击反馈动画 (可选)
+          btn.style.transform = 'scale(0.92)';
+          btn.style.backgroundColor = '#d4e6ff';
+          setTimeout(() => {
+            btn.style.transform = '';
+            btn.style.backgroundColor = '';
+          }, 120);
+        } else {
+          // 复制失败时允许手动选择复制 (降低体验但提供备选)
+          showToast('❌ 复制失败，请手动复制');
+          // 可选：选中文本提示
+          const range = document.createRange();
+          range.selectNodeContents(btn);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+
+      // 渲染所有箭头按钮
+      function renderArrows() {
+        // 使用 DocumentFragment 提高性能
+        const fragment = document.createDocumentFragment();
+
+        uniqueArrows.forEach(arrow => {
+          const btn = document.createElement('button');
+          btn.className = 'arrow-btn';
+          btn.dataset.arrow = arrow;
+          btn.textContent = arrow;
+          // 无障碍：添加 aria-label
+          btn.setAttribute('aria-label', `复制箭头 ${arrow}`);
+          btn.setAttribute('type', 'button');
+          btn.addEventListener('click', handleArrowClick);
+          fragment.appendChild(btn);
+        });
+
+        grid.innerHTML = '';
+        grid.appendChild(fragment);
+      }
+
+      // 初始化
+      renderArrows();
+
+      // 针对过小的字体或emoji样式做补充 (如某些箭头渲染不佳)
+      // 已经通过字体设置让emoji显示为彩色/兼容
+    })();
+  </script>
+</body>
+</html>
